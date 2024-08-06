@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes" ?>
+<xliff version="1.0">
+    <file source-language="en" datatype="plaintext" original="messages" date="2024-04-09T12:00:00Z" product-name="tw_watermark">
+        <header />
+        <body>
+            <trans-unit id="fontPath">
+                <source>File: This must point to a valid font file on the server. Default if empty: ../vendor/tollwerk/tw-watermark/Resources/Public/Fonts/NimbusSans-Regular.t1</source>
+            </trans-unit>
+            <trans-unit id="logFile">
+                <source>Log file: If set, will write ImageMagick output and errors to this file, e.g. myImageMagick.log or '/var/logs/myImageMagick.log'</source>
+            </trans-unit>
+            <trans-unit id="textPrefix">
+                <source>Text prefix: Default is '@'. You can set an empty prefix as well.</source>
+            </trans-unit>
+            <trans-unit id="size">
+                <source>Size: Default if empty: 12</source>
+            </trans-unit>
+            <trans-unit id="gravity">
+                <source>Position: Default if empty1: southeast</source>
+            </trans-unit>
+            <trans-unit id="color">
+                <source>Color: Default if empty: #00000000</source>
+            </trans-unit>
+            <trans-unit id="backgroundColor">
+                <source>Background Color: Default if empty: #FFFFFF00</source>
+            </trans-unit>
+            <trans-unit id="positionX">
+                <source>Position X: Default if empty: 10</source>
+            </trans-unit>
+            <trans-unit id="positionY">
+                <source>Position Y: Default if empty: 10</source>
+            </trans-unit>
+        </body>
+    </file>
+</xliff>

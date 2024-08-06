@@ -1,0 +1,26 @@
+# cat=General; type=string; label=LLL:EXT:tw_watermark/Resources/Private/Language/locallang_be.xlf:fontPath
+fontPath =
+
+# cat=General; type=string; label=LLL:EXT:tw_watermark/Resources/Private/Language/locallang_be.xlf:logFile
+logFile =
+
+# cat=Display; type=string; label=LLL:EXT:tw_watermark/Resources/Private/Language/locallang_be.xlf:textPrefix
+textPrefix = @
+
+# cat=Display; type=string; label=LLL:EXT:tw_watermark/Resources/Private/Language/locallang_be.xlf:size
+size =
+
+# cat=Display; type=options[southeast=southeast,southwest=southwest,northwest=northwest,northeast=northeast]; label=LLL:EXT:tw_watermark/Resources/Private/Language/locallang_be.xlf:gravity
+gravity =
+
+# cat=Display; type=string; label=LLL:EXT:tw_watermark/Resources/Private/Language/locallang_be.xlf:color
+color =
+
+# cat=Display; type=string; label=LLL:EXT:tw_watermark/Resources/Private/Language/locallang_be.xlf:backgroundColor
+backgroundColor =
+
+# cat=Display; type=string; label=LLL:EXT:tw_watermark/Resources/Private/Language/locallang_be.xlf:positionX
+positionX =
+
+# cat=Display; type=string; label=LLL:EXT:tw_watermark/Resources/Private/Language/locallang_be.xlf:positionY
+positionY =
