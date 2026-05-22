@@ -1,10 +1,13 @@
 {
     "name": "tollwerk/tw-watermark",
     "type": "typo3-cms-extension",
-    "description": "Automatically add watermarks to all images",
+    "description": "Automatically add watermarks to all images with copyright or author metadata",
     "license": "LGPL-3.0-or-later",
     "keywords": [
-        "typo3"
+        "TYPO3",
+        "extension",
+        "article",
+        "news"
     ],
     "authors": [
         {
@@ -16,8 +19,9 @@
     ],
     "homepage": "https://tollwerk.de",
     "support": {
-        "issues": "https://tollwerk.de"
-    },
+        "issues": "https://github.com/tollwerk/TYPO3-ext-tw_watermark/issues",
+        "source": "https://github.com/tollwerk/TYPO3-ext-tw_watermak",
+        "docs": "https://github.com/tollwerk/TYPO3-ext-tw_watermark"    },
     "require": {
         "typo3/cms-core": "^12",
         "typo3/cms-fluid-styled-content": "^12"
