@@ -1,5 +1,9 @@
 # TYPO3 Watermark Images
 
+[![TYPO3](https://img.shields.io/badge/TYPO3-13-green.svg)](https://get.typo3.org/version/12)
+[![TYPO3](https://img.shields.io/badge/License-GPL%203%20or%20later-lightgray.svg)](https://get.typo3.org/version/12)
+
+
 Automatically add watermarks to all images with copyright or author metadata.
 
 ## Installation 
