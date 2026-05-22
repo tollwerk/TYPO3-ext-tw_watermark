@@ -23,6 +23,7 @@
         "source": "https://github.com/tollwerk/TYPO3-ext-tw_watermak",
         "docs": "https://github.com/tollwerk/TYPO3-ext-tw_watermark"    },
     "require": {
+        "php": ">= 7.4 < 8.5",
         "typo3/cms-core": "^12",
         "typo3/cms-fluid-styled-content": "^12"
     },
