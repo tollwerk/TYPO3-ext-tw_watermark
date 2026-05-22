@@ -2,7 +2,7 @@
     "name": "tollwerk/tw-watermark",
     "type": "typo3-cms-extension",
     "description": "Automatically add watermarks to all images with copyright or author metadata",
-    "license": "LGPL-3.0-or-later",
+    "license": "GPL-3.0-or-later",
     "keywords": [
         "TYPO3",
         "extension",
@@ -21,7 +21,8 @@
     "support": {
         "issues": "https://github.com/tollwerk/TYPO3-ext-tw_watermark/issues",
         "source": "https://github.com/tollwerk/TYPO3-ext-tw_watermak",
-        "docs": "https://github.com/tollwerk/TYPO3-ext-tw_watermark"    },
+        "docs": "https://github.com/tollwerk/TYPO3-ext-tw_watermark"
+    },
     "require": {
         "php": ">= 7.4 < 8.5",
         "typo3/cms-core": "^13",
