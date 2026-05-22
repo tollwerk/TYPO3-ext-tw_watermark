@@ -24,8 +24,8 @@
         "docs": "https://github.com/tollwerk/TYPO3-ext-tw_watermark"    },
     "require": {
         "php": ">= 7.4 < 8.5",
-        "typo3/cms-core": "^12",
-        "typo3/cms-fluid-styled-content": "^12"
+        "typo3/cms-core": "^13",
+        "typo3/cms-fluid-styled-content": "^13"
     },
     "autoload": {
         "psr-4": {
@@ -37,7 +37,7 @@
             "extension-key": "tw_watermark"
         },
         "branch-alias": {
-            "dev-master": "12.0.x-dev"
+            "dev-master": "13.0.x-dev"
         }
     }
 }

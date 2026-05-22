@@ -14,13 +14,11 @@
 
 namespace Tollwerk\TwWatermark\Resource\Processing;
 
-use TYPO3\CMS\Core\Core\Environment;
 use TYPO3\CMS\Core\Imaging\GraphicalFunctions;
+use TYPO3\CMS\Core\Imaging\ImageProcessingInstructions;
 use TYPO3\CMS\Core\Resource\FileInterface;
 use TYPO3\CMS\Core\Resource\Processing\TaskInterface;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
-use TYPO3\CMS\Core\Utility\MathUtility;
-use TYPO3\CMS\Frontend\Imaging\GifBuilder;
 use TYPO3\CMS\Core\Resource\Processing\LocalCropScaleMaskHelper as CoreLocalCropScaleMaskHelper;
 
 /**
@@ -40,150 +38,75 @@ class LocalCropScaleMaskHelper extends CoreLocalCropScaleMaskHelper
     /**
      * Does the heavy lifting prescribed in processTask()
      * except that the processing can be performed on any given local image
-     *
-     * @param TaskInterface $task             Task
-     * @param string        $originalFileName Original file name
-     *
-     * @return array|null
      */
     public function processWithLocalFile(TaskInterface $task, string $originalFileName): ?array
     {
-        // Get target file object.
         $result = null;
         $targetFile = $task->getTargetFile();
+        $targetFileExtension = $task->getTargetFileExtension();
 
-        $watermarkHelper = GeneralUtility::makeInstance(WatermarkHelper::class);
+        $imageOperations = GeneralUtility::makeInstance(GraphicalFunctions::class);
 
-        // Init GifBuilder object.
-        $gifBuilder = GeneralUtility::makeInstance(GifBuilder::class);
-
-        // Get configuration for GifBuilder.
         $configuration = $targetFile->getProcessingConfiguration();
-        $configuration['additionalParameters'] = $this->modifyImageMagickStripProfileParameters((string)($configuration['additionalParameters'] ?? ''), $configuration);
-        if (empty($configuration['fileExtension'])) {
-            $configuration['fileExtension'] = $task->getTargetFileExtension();
-        }
+        $configuration['additionalParameters'] ??= '';
 
-        // Start: Tollwerk/TwWatermark: Add watermark text. This is the only addition to the original code from TYPO3 core.
-        // TODO: Check if we can avoid overwriting processWithLocalFile().
+        // Start: Tollwerk/TwWatermark:
+        // Add watermark text. This is the only addition to the original code from TYPO3 core.
+        $watermarkHelper = GeneralUtility::makeInstance(WatermarkHelper::class);
         $configuration['additionalParameters'] .= $watermarkHelper->addTextToGmParams(
             $targetFile->getOriginalFile()->getProperty('copyright'),
             $targetFile->getProcessingConfiguration()
         );
         // End: Tollwerk/TwWatermark
 
-        // Get Options for GifBuilder.
-        $options = $this->getConfigurationForImageCropScaleMask($targetFile, $gifBuilder);
-
-        // Crop image.
-        $croppedImage = null;
-        if (!empty($configuration['crop'])) {
-            // check if it is a json object
-            $cropData = json_decode($configuration['crop']);
-            if ($cropData) {
-                $offsetLeft = (int)($cropData->x ?? 0);
-                $offsetTop = (int)($cropData->y ?? 0);
-                $newWidth = (int)($cropData->width ?? 0);
-                $newHeight = (int)($cropData->height ?? 0);
-            } else {
-                [$offsetLeft, $offsetTop, $newWidth, $newHeight] = explode(',', $configuration['crop'], 4);
-            }
-
-            $backupPrefix = $gifBuilder->filenamePrefix;
-            $gifBuilder->filenamePrefix = 'crop_';
-
-            $jpegQuality = MathUtility::forceIntegerInRange($GLOBALS['TYPO3_CONF_VARS']['GFX']['jpg_quality'], 10, 100, 85);
-
+        // Normal situation (no masking) - just scale the image
+        if (!is_array($configuration['maskImages'] ?? null)) {
             // the result info is an array with 0=width,1=height,2=extension,3=filename
-            $result = $gifBuilder->imageMagickConvert(
+            $result = $imageOperations->resize(
                 $originalFileName,
-                $configuration['fileExtension'],
-                '',
-                '',
-                sprintf('-crop %dx%d+%d+%d +repage -quality %d', $newWidth, $newHeight, $offsetLeft, $offsetTop, $jpegQuality),
-                '',
-                ['noScale' => true],
-                true
-            );
-            $gifBuilder->filenamePrefix = $backupPrefix;
-
-            if ($result !== null) {
-                $originalFileName = $croppedImage = $result[3];
-            }
-        }
-
-        // Normal situation (no masking)
-        if (!(is_array($configuration['maskImages'] ?? null) && $GLOBALS['TYPO3_CONF_VARS']['GFX']['processor_enabled'])) {
-            // the result info is an array with 0=width,1=height,2=extension,3=filename
-            $result = $gifBuilder->imageMagickConvert(
-                $originalFileName,
-                $configuration['fileExtension'],
+                $targetFileExtension,
                 $configuration['width'] ?? '',
                 $configuration['height'] ?? '',
                 $configuration['additionalParameters'],
-                $configuration['frame'] ?? '',
-                $options,
-                // in case file is in `/typo3temp/`, it must create a result
-                $this->isTemporaryFile($originalFileName)
+                $configuration,
             );
         } else {
-            // TODO: Check if this else-branch is important for watermarking the image.
-            $targetFileName = $this->getFilenameForImageCropScaleMask($task);
-            $temporaryFileName = Environment::getPublicPath() . '/typo3temp/' . $targetFileName;
+            $temporaryFileName = $this->getFilenameForImageCropScaleMask($task);
             $maskImage = $configuration['maskImages']['maskImage'] ?? null;
             $maskBackgroundImage = $configuration['maskImages']['backgroundImage'];
             if ($maskImage instanceof FileInterface && $maskBackgroundImage instanceof FileInterface) {
-                $temporaryExtension = 'png';
-                if (!$GLOBALS['TYPO3_CONF_VARS']['GFX']['processor_allowTemporaryMasksAsPng']) {
-                    // If ImageMagick version 5+
-                    $temporaryExtension = $gifBuilder->gifExtension;
-                }
-                $tempFileInfo = $gifBuilder->imageMagickConvert(
+                // This converts the original image to a temporary PNG file during all steps of the masking process
+                $tempFileInfo = $imageOperations->resize(
                     $originalFileName,
-                    $temporaryExtension,
+                    'png',
                     $configuration['width'] ?? '',
                     $configuration['height'] ?? '',
                     $configuration['additionalParameters'],
-                    $configuration['frame'] ?? '',
-                    $options
+                    $configuration
                 );
-                if (is_array($tempFileInfo)) {
-                    $maskBottomImage = $configuration['maskImages']['maskBottomImage'];
-                    if ($maskBottomImage instanceof FileInterface) {
-                        $maskBottomImageMask = $configuration['maskImages']['maskBottomImageMask'];
-                    } else {
-                        $maskBottomImageMask = null;
-                    }
-
-                    //  Scaling:    ****
-                    $tempScale = [];
-                    $command = '-geometry ' . $tempFileInfo[0] . 'x' . $tempFileInfo[1] . '!';
-                    $command = $this->modifyImageMagickStripProfileParameters($command, $configuration);
-                    $tmpStr = $gifBuilder->randomName();
-                    //  m_mask
-                    $tempScale['m_mask'] = $tmpStr . '_mask.' . $temporaryExtension;
-                    $gifBuilder->imageMagickExec($maskImage->getForLocalProcessing(true), $tempScale['m_mask'], $command);
-                    //  m_bgImg
-                    $tempScale['m_bgImg'] = $tmpStr . '_bgImg.miff';
-                    $gifBuilder->imageMagickExec($maskBackgroundImage->getForLocalProcessing(), $tempScale['m_bgImg'], $command);
-                    //  m_bottomImg / m_bottomImg_mask
+                if ($tempFileInfo !== null) {
+                    // Scaling
+                    $command = '-geometry ' . $tempFileInfo->getWidth() . 'x' . $tempFileInfo->getHeight() . '!';
+                    $imageOperations->mask(
+                        $tempFileInfo->getRealPath(),
+                        $temporaryFileName,
+                        $maskImage->getForLocalProcessing(),
+                        $maskBackgroundImage->getForLocalProcessing(),
+                        $command,
+                        $configuration
+                    );
+                    $maskBottomImage = $configuration['maskImages']['maskBottomImage'] ?? null;
+                    $maskBottomImageMask = $configuration['maskImages']['maskBottomImageMask'] ?? null;
                     if ($maskBottomImage instanceof FileInterface && $maskBottomImageMask instanceof FileInterface) {
-                        $tempScale['m_bottomImg'] = $tmpStr . '_bottomImg.' . $temporaryExtension;
-                        $gifBuilder->imageMagickExec($maskBottomImage->getForLocalProcessing(), $tempScale['m_bottomImg'], $command);
-                        $tempScale['m_bottomImg_mask'] = ($tmpStr . '_bottomImg_mask.') . $temporaryExtension;
-                        $gifBuilder->imageMagickExec($maskBottomImageMask->getForLocalProcessing(), $tempScale['m_bottomImg_mask'], $command);
-                        // BEGIN combining:
-                        // The image onto the background
-                        $gifBuilder->combineExec($tempScale['m_bgImg'], $tempScale['m_bottomImg'], $tempScale['m_bottomImg_mask'], $tempScale['m_bgImg']);
-                    }
-                    // The image onto the background
-                    $gifBuilder->combineExec($tempScale['m_bgImg'], $tempFileInfo[3], $tempScale['m_mask'], $temporaryFileName);
-                    $tempFileInfo[3] = $temporaryFileName;
-                    // Unlink the temp-images...
-                    foreach ($tempScale as $tempFile) {
-                        if (@is_file($tempFile)) {
-                            unlink($tempFile);
-                        }
+                        // Uses the temporary PNG file from the previous step and applies another mask
+                        $imageOperations->mask(
+                            $temporaryFileName,
+                            $temporaryFileName,
+                            $maskBottomImage->getForLocalProcessing(),
+                            $maskBottomImageMask->getForLocalProcessing(),
+                            $command,
+                            $configuration
+                        );
                     }
                 }
                 $result = $tempFileInfo;
@@ -192,11 +115,24 @@ class LocalCropScaleMaskHelper extends CoreLocalCropScaleMaskHelper
 
         // check if the processing really generated a new file (scaled and/or cropped)
         if ($result !== null) {
-            if ($result[3] !== $originalFileName || $originalFileName === $croppedImage) {
+            // The file processing yielded a different file extension than we anticipated. Most likely because
+            // the processing service found out a file type needed to use fallback storage. In this case, we
+            // append the actually received file extension to our file to be stored, which will also hint at
+            // a failed conversion, like some-file.avif.jpg. Otherwise use the same file extension. This is
+            // evaluated for persistence in @see LocalImageProcessor->processTaskWithLocalFile().
+            $remapProcessedTargetFileExtension = ($targetFileExtension !== $result->getExtension())
+                // Remap to correct image type extension.
+                ? $result->getExtension()
+                // No file extension remap required.
+                : null;
+            // @todo: realpath handling should be revisited, they may produce issues
+            //        with open_basedir restrictions and/or lockRootPath.
+            if ($result->getRealPath() !== realpath($originalFileName)) {
                 $result = [
-                    'width' => $result[0],
-                    'height' => $result[1],
-                    'filePath' => $result[3],
+                    'width' => $result->getWidth(),
+                    'height' => $result->getHeight(),
+                    'filePath' => $result->getRealPath(),
+                    'remapProcessedTargetFileExtension' => $remapProcessedTargetFileExtension,
                 ];
             } else {
                 // No file was generated
@@ -204,35 +140,29 @@ class LocalCropScaleMaskHelper extends CoreLocalCropScaleMaskHelper
             }
         }
 
-        // Cleanup temp file if it isn't used as result
-        if ($croppedImage && ($result === null || $croppedImage !== $result['filePath'])) {
-            GeneralUtility::unlink_tempfile($croppedImage);
-        }
-
         // If noScale option is applied, we need to reset the width and height to ensure the scaled values
         // are used for the generated image tag even if the image itself is not scaled. This is needed, as
         // the result is discarded due to the fact that the original image is used.
         // @see https://forge.typo3.org/issues/100972
         // Note: This should only happen if no image has been generated ($result === null).
-        if ($result === null && ($options['noScale'] ?? false)) {
-            $imageOperations = GeneralUtility::makeInstance(GraphicalFunctions::class);
+        if ($result === null && ($configuration['noScale'] ?? false)) {
             $configuration = $task->getConfiguration();
             $localProcessedFile = $task->getSourceFile()->getForLocalProcessing(false);
-            $imageDimensions = $imageOperations->getImageDimensions($localProcessedFile);
-            $imageScaleInfo = $imageOperations->getImageScale(
-                $imageDimensions,
+            $imageDimensions = $imageOperations->getImageDimensions($localProcessedFile, true);
+            $imageScaleInfo = ImageProcessingInstructions::fromCropScaleValues(
+                $imageDimensions->getWidth(),
+                $imageDimensions->getHeight(),
                 $configuration['width'] ?? '',
                 $configuration['height'] ?? '',
-                $options
+                $configuration
             );
-            $targetFile->updateProperties(
-                [
-                'width' => $imageScaleInfo[0],
-                'height' => $imageScaleInfo[1],
-                ]
-            );
+            $targetFile->updateProperties([
+                'width' => $imageScaleInfo->width,
+                'height' => $imageScaleInfo->height,
+            ]);
         }
 
         return $result;
     }
+
 }
